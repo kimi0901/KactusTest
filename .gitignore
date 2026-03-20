@@ -27,3 +27,7 @@ Temporary Items
 
 # Sketch files
 *.sketch
+
+# Swift Package Manager
+.build/
+.swiftpm/
