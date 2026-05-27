@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>パーキンソン病 薬物血中濃度シミュレーター</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f7fa;
+  --card: #ffffff;
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  color: white;
+  padding: 20px 24px;
+  text-align: center;
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-header p {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+.main-layout {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.sidebar {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chart-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.drug-entry {
+  padding: 16px;
+  position: relative;
+}
+
+.drug-entry .drug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.drug-entry .drug-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drug-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.btn-remove:hover {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  font-weight: 500;
+}
+
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: white;
+  transition: border-color 0.15s;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.schedule-section {
+  margin-top: 8px;
+}
+
+.schedule-section .schedule-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.schedule-presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.schedule-presets button {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.schedule-presets button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.time-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.time-slot {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.time-slot input[type="time"] {
+  width: 110px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.time-slot input[type="time"]:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.time-slot .btn-remove-time {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.time-slot .btn-remove-time:hover {
+  color: var(--danger);
+}
+
+.btn-add-time {
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  color: var(--primary);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.btn-add-time:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.btn-add-drug {
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.btn-add-drug:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.chart-container {
+  padding: 20px;
+  position: relative;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  max-height: 500px;
+}
+
+.chart-options {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.chart-options label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.chart-options input[type="checkbox"] {
+  accent-color: var(--primary);
+}
+
+.chart-options select {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+
+.info-panel {
+  padding: 16px 20px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+
+.info-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.info-panel th, .info-panel td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.info-panel th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.disclaimer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 16px 20px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  margin: 0 20px 20px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.patch-duration {
+  margin-top: 6px;
+}
+
+.patch-duration label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.patch-duration input {
+  width: 80px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .main-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>パーキンソン病 薬物血中濃度シミュレーター</h1>
+  <p>L-dopa・ドパミンアゴニストの服用後血中濃度推移を可視化</p>
+</div>
+
+<div class="main-layout">
+  <div class="sidebar" id="sidebar">
+    <div id="drug-entries"></div>
+    <button class="btn-add-drug" id="btn-add-drug">＋ 薬剤を追加</button>
+  </div>
+
+  <div class="chart-area">
+    <div class="card">
+      <div class="chart-container">
+        <canvas id="pk-chart"></canvas>
+      </div>
+      <div class="chart-options">
+        <label>
+          <input type="checkbox" id="show-total" checked>
+          合計濃度を表示
+        </label>
+        <label>
+          <input type="checkbox" id="show-therapeutic">
+          L-dopa治療域を表示
+        </label>
+        <label>
+          表示時間:
+          <select id="time-range">
+            <option value="24">24時間</option>
+            <option value="36">36時間</option>
+            <option value="48">48時間</option>
+          </select>
+        </label>
+      </div>
+      <div class="info-panel" id="info-panel">
+        <strong>薬物動態パラメータ</strong>
+        <table id="pk-table">
+          <thead>
+            <tr>
+              <th>薬剤</th>
+              <th>Tmax</th>
+              <th>半減期</th>
+              <th>用量</th>
+              <th>服用回数</th>
+            </tr>
+          </thead>
+          <tbody id="pk-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="disclaimer">
+  ※ 本ツールは教育・参考目的の簡易シミュレーションです。実際の血中濃度は個人差（体重・腎機能・食事等）により大きく異なります。治療に関する判断は必ず主治医にご相談ください。<br>
+  薬物動態パラメータは文献値に基づく近似モデルを使用しています。
+</div>
+
+<script>
+const DRUG_DATABASE = {
+  'levodopa-ir': {
+    name: 'レボドパ/カルビドパ 速放錠',
+    shortName: 'L-dopa IR',
+    category: 'levodopa',
+    ka: 2.5,
+    ke: 0.462,
+    bioavailability: 1.0,
+    defaultDose: 100,
+    doseUnit: 'mg',
+    doseOptions: [50, 100, 150, 200, 250],
+    color: '#2563eb',
+    description: 'メネシット・ネオドパストン等'
+  },
+  'levodopa-cr': {
+    name: 'レボドパ/カルビドパ 徐放錠',
+    shortName: 'L-dopa CR',
+    category: 'levodopa',
+    ka: 0.6,
+    ke: 0.462,
+    bioavailability: 0.7,
+    defaultDose: 100,
+    doseUnit: 'mg',
+    doseOptions: [50, 100, 200],
+    color: '#60a5fa',
+    description: 'メネシット配合錠等の徐放製剤'
+  },
+  'levodopa-entacapone': {
+    name: 'レボドパ/カルビドパ/エンタカポン',
+    shortName: 'L-dopa+COMT阻害',
+    category: 'levodopa',
+    ka: 2.5,
+    ke: 0.33,
+    bioavailability: 1.35,
+    defaultDose: 100,
+    doseUnit: 'mg',
+    doseOptions: [50, 100, 150, 200],
+    color: '#1d4ed8',
+    description: 'スタレボ配合錠'
+  },
+  'pramipexole-ir': {
+    name: 'プラミペキソール 速放錠',
+    shortName: 'プラミペキソール IR',
+    category: 'agonist',
+    ka: 1.5,
+    ke: 0.087,
+    bioavailability: 1.0,
+    defaultDose: 0.5,
+    doseUnit: 'mg',
+    doseOptions: [0.125, 0.25, 0.5, 1.0, 1.5],
+    color: '#16a34a',
+    description: 'ビ・シフロール'
+  },
+  'pramipexole-er': {
+    name: 'プラミペキソール 徐放錠',
+    shortName: 'プラミペキソール ER',
+    category: 'agonist',
+    ka: 0.25,
+    ke: 0.087,
+    bioavailability: 1.0,
+    defaultDose: 1.5,
+    doseUnit: 'mg',
+    doseOptions: [0.375, 0.75, 1.5, 3.0, 4.5],
+    color: '#4ade80',
+    description: 'ミラペックスLA'
+  },
+  'ropinirole-ir': {
+    name: 'ロピニロール 速放錠',
+    shortName: 'ロピニロール IR',
+    category: 'agonist',
+    ka: 2.0,
+    ke: 0.115,
+    bioavailability: 1.0,
+    defaultDose: 2,
+    doseUnit: 'mg',
+    doseOptions: [0.25, 0.5, 1, 2, 4],
+    color: '#ea580c',
+    description: 'レキップ'
+  },
+  'ropinirole-cr': {
+    name: 'ロピニロール 徐放錠',
+    shortName: 'ロピニロール CR',
+    category: 'agonist',
+    ka: 0.35,
+    ke: 0.115,
+    bioavailability: 1.0,
+    defaultDose: 8,
+    doseUnit: 'mg',
+    doseOptions: [2, 4, 8, 12, 16],
+    color: '#fb923c',
+    description: 'レキップCR'
+  },
+  'rotigotine-patch': {
+    name: 'ロチゴチン パッチ',
+    shortName: 'ロチゴチン',
+    category: 'agonist',
+    isPatch: true,
+    ke: 0.126,
+    patchDuration: 24,
+    defaultDose: 9,
+    doseUnit: 'mg',
+    doseOptions: [2.25, 4.5, 9, 13.5, 18],
+    color: '#9333ea',
+    description: 'ニュープロパッチ'
+  }
+};
+
+const SCHEDULE_PRESETS = {
+  '1日3回': ['07:00', '12:00', '18:00'],
+  '1日4回': ['07:00', '11:00', '15:00', '19:00'],
+  '1日2回': ['08:00', '20:00'],
+  '1日1回朝': ['08:00'],
+  '1日5回': ['06:00', '09:30', '13:00', '16:30', '20:00'],
+};
+
+const DRUG_COLORS = [
+  '#2563eb', '#16a34a', '#ea580c', '#9333ea',
+  '#dc2626', '#0891b2', '#ca8a04', '#6366f1'
+];
+
+let drugEntries = [];
+let entryIdCounter = 0;
+let chart = null;
+
+function timeToHours(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h + m / 60;
+}
+
+function batemanConcentration(t, ka, ke, bioavailability) {
+  if (t <= 0) return 0;
+  const factor = (ka * bioavailability) / (ka - ke);
+  return factor * (Math.exp(-ke * t) - Math.exp(-ka * t));
+}
+
+function patchConcentration(t, ke, patchDuration) {
+  if (t <= 0) return 0;
+  if (t <= patchDuration) {
+    return (1 / ke) * (1 - Math.exp(-ke * t));
+  } else {
+    const cAtRemoval = (1 / ke) * (1 - Math.exp(-ke * patchDuration));
+    return cAtRemoval * Math.exp(-ke * (t - patchDuration));
+  }
+}
+
+function computeDrugConcentration(drugKey, dose, times, totalHours) {
+  const drug = DRUG_DATABASE[drugKey];
+  const dt = 0.05;
+  const points = Math.ceil(totalHours / dt) + 1;
+  const concentrations = new Array(points).fill(0);
+  const timeAxis = [];
+
+  for (let i = 0; i < points; i++) {
+    timeAxis.push(i * dt);
+  }
+
+  const refDose = drug.defaultDose;
+  const doseRatio = dose / refDose;
+
+  for (const timeStr of times) {
+    const tDose = timeToHours(timeStr);
+    for (let i = 0; i < points; i++) {
+      const t = timeAxis[i] - tDose;
+      if (t < 0) continue;
+      let c;
+      if (drug.isPatch) {
+        c = patchConcentration(t, drug.ke, drug.patchDuration || 24);
+      } else {
+        c = batemanConcentration(t, drug.ka, drug.ke, drug.bioavailability || 1.0);
+      }
+      concentrations[i] += c * doseRatio;
+    }
+  }
+
+  return { timeAxis, concentrations };
+}
+
+function getTmax(ka, ke) {
+  if (ka === ke) return 1 / ka;
+  return Math.log(ka / ke) / (ka - ke);
+}
+
+function getHalfLife(ke) {
+  return 0.693 / ke;
+}
+
+function createDrugEntry(drugKey) {
+  const id = entryIdCounter++;
+  const drug = DRUG_DATABASE[drugKey || 'levodopa-ir'];
+  const defaultTimes = drugKey && DRUG_DATABASE[drugKey].isPatch
+    ? ['08:00']
+    : ['07:00', '12:00', '18:00'];
+
+  const entry = {
+    id,
+    drugKey: drugKey || 'levodopa-ir',
+    dose: drug.defaultDose,
+    times: [...defaultTimes],
+    colorIndex: drugEntries.length % DRUG_COLORS.length
+  };
+
+  drugEntries.push(entry);
+  renderDrugEntries();
+  updateChart();
+  return entry;
+}
+
+function removeDrugEntry(id) {
+  drugEntries = drugEntries.filter(e => e.id !== id);
+  renderDrugEntries();
+  updateChart();
+}
+
+function renderDrugEntries() {
+  const container = document.getElementById('drug-entries');
+  container.innerHTML = '';
+
+  drugEntries.forEach((entry, idx) => {
+    const drug = DRUG_DATABASE[entry.drugKey];
+    const color = getDrugDisplayColor(entry);
+
+    const div = document.createElement('div');
+    div.className = 'card drug-entry';
+    div.innerHTML = `
+      <div class="drug-header">
+        <span class="drug-label">
+          <span class="drug-color-dot" style="background:${color}"></span>
+          薬剤 ${idx + 1}
+        </span>
+        ${drugEntries.length > 1 ? `<button class="btn-remove" data-id="${entry.id}" title="削除">&times;</button>` : ''}
+      </div>
+
+      <div class="form-group">
+        <label>薬剤名</label>
+        <select class="drug-select" data-id="${entry.id}">
+          <optgroup label="レボドパ製剤">
+            <option value="levodopa-ir" ${entry.drugKey === 'levodopa-ir' ? 'selected' : ''}>レボドパ/カルビドパ 速放錠（メネシット等）</option>
+            <option value="levodopa-cr" ${entry.drugKey === 'levodopa-cr' ? 'selected' : ''}>レボドパ/カルビドパ 徐放錠</option>
+            <option value="levodopa-entacapone" ${entry.drugKey === 'levodopa-entacapone' ? 'selected' : ''}>レボドパ/カルビドパ/エンタカポン（スタレボ）</option>
+          </optgroup>
+          <optgroup label="ドパミンアゴニスト">
+            <option value="pramipexole-ir" ${entry.drugKey === 'pramipexole-ir' ? 'selected' : ''}>プラミペキソール 速放錠（ビ・シフロール）</option>
+            <option value="pramipexole-er" ${entry.drugKey === 'pramipexole-er' ? 'selected' : ''}>プラミペキソール 徐放錠（ミラペックスLA）</option>
+            <option value="ropinirole-ir" ${entry.drugKey === 'ropinirole-ir' ? 'selected' : ''}>ロピニロール 速放錠（レキップ）</option>
+            <option value="ropinirole-cr" ${entry.drugKey === 'ropinirole-cr' ? 'selected' : ''}>ロピニロール 徐放錠（レキップCR）</option>
+            <option value="rotigotine-patch" ${entry.drugKey === 'rotigotine-patch' ? 'selected' : ''}>ロチゴチン パッチ（ニュープロパッチ）</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>用量 (${drug.doseUnit})</label>
+        <select class="dose-select" data-id="${entry.id}">
+          ${drug.doseOptions.map(d =>
+            `<option value="${d}" ${d === entry.dose ? 'selected' : ''}>${d} ${drug.doseUnit}</option>`
+          ).join('')}
+        </select>
+      </div>
+
+      ${drug.isPatch ? `
+        <div class="form-group">
+          <label>貼付時刻</label>
+          <div class="time-slots">
+            ${entry.times.map((t, ti) => `
+              <div class="time-slot">
+                <input type="time" value="${t}" data-id="${entry.id}" data-ti="${ti}" class="time-input">
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : `
+        <div class="schedule-section">
+          <div class="schedule-label">
+            <span>服用スケジュール</span>
+          </div>
+          <div class="schedule-presets">
+            ${Object.entries(SCHEDULE_PRESETS).map(([label]) =>
+              `<button class="preset-btn" data-id="${entry.id}" data-preset="${label}">${label}</button>`
+            ).join('')}
+          </div>
+          <div class="time-slots">
+            ${entry.times.map((t, ti) => `
+              <div class="time-slot">
+                <input type="time" value="${t}" data-id="${entry.id}" data-ti="${ti}" class="time-input">
+                ${entry.times.length > 1 ? `<button class="btn-remove-time" data-id="${entry.id}" data-ti="${ti}">&times;</button>` : ''}
+              </div>
+            `).join('')}
+            <button class="btn-add-time" data-id="${entry.id}">＋</button>
+          </div>
+        </div>
+      `}
+    `;
+
+    container.appendChild(div);
+  });
+
+  attachEntryListeners();
+}
+
+function getDrugDisplayColor(entry) {
+  const drug = DRUG_DATABASE[entry.drugKey];
+  return drug.color;
+}
+
+function attachEntryListeners() {
+  document.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeDrugEntry(Number(btn.dataset.id)));
+  });
+
+  document.querySelectorAll('.drug-select').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const entry = drugEntries.find(en => en.id === Number(e.target.dataset.id));
+      if (!entry) return;
+      const newDrug = DRUG_DATABASE[e.target.value];
+      entry.drugKey = e.target.value;
+      entry.dose = newDrug.defaultDose;
+      if (newDrug.isPatch) {
+        entry.times = ['08:00'];
+      } else if (entry.times.length === 1 && !DRUG_DATABASE[entry.drugKey].isPatch) {
+        entry.times = ['07:00', '12:00', '18:00'];
+      }
+      renderDrugEntries();
+      updateChart();
+    });
+  });
+
+  document.querySelectorAll('.dose-select').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const entry = drugEntries.find(en => en.id === Number(e.target.dataset.id));
+      if (entry) {
+        entry.dose = Number(e.target.value);
+        updateChart();
+      }
+    });
+  });
+
+  document.querySelectorAll('.time-input').forEach(inp => {
+    inp.addEventListener('change', (e) => {
+      const entry = drugEntries.find(en => en.id === Number(e.target.dataset.id));
+      if (entry) {
+        entry.times[Number(e.target.dataset.ti)] = e.target.value;
+        updateChart();
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-remove-time').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = drugEntries.find(en => en.id === Number(btn.dataset.id));
+      if (entry && entry.times.length > 1) {
+        entry.times.splice(Number(btn.dataset.ti), 1);
+        renderDrugEntries();
+        updateChart();
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-add-time').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = drugEntries.find(en => en.id === Number(btn.dataset.id));
+      if (entry) {
+        const lastTime = entry.times[entry.times.length - 1];
+        const [h, m] = lastTime.split(':').map(Number);
+        const newH = Math.min(h + 4, 23);
+        entry.times.push(`${String(newH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        renderDrugEntries();
+        updateChart();
+      }
+    });
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = drugEntries.find(en => en.id === Number(btn.dataset.id));
+      if (entry) {
+        entry.times = [...SCHEDULE_PRESETS[btn.dataset.preset]];
+        renderDrugEntries();
+        updateChart();
+      }
+    });
+  });
+}
+
+function formatHourLabel(h) {
+  const hour = Math.floor(h) % 24;
+  const min = Math.round((h - Math.floor(h)) * 60);
+  return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function updateChart() {
+  const totalHours = Number(document.getElementById('time-range').value);
+  const showTotal = document.getElementById('show-total').checked;
+  const showTherapeutic = document.getElementById('show-therapeutic').checked;
+
+  const dt = 0.05;
+  const points = Math.ceil(totalHours / dt) + 1;
+  const timeLabels = [];
+  for (let i = 0; i < points; i++) {
+    timeLabels.push(i * dt);
+  }
+
+  const datasets = [];
+  let totalConcentrations = new Array(points).fill(0);
+  let hasLevodopa = false;
+
+  drugEntries.forEach((entry) => {
+    const drug = DRUG_DATABASE[entry.drugKey];
+    const { concentrations } = computeDrugConcentration(
+      entry.drugKey, entry.dose, entry.times, totalHours
+    );
+
+    if (drug.category === 'levodopa') hasLevodopa = true;
+
+    for (let i = 0; i < points; i++) {
+      totalConcentrations[i] += concentrations[i];
+    }
+
+    datasets.push({
+      label: `${drug.shortName} ${entry.dose}${drug.doseUnit}`,
+      data: concentrations.map((c, i) => ({ x: timeLabels[i], y: c })),
+      borderColor: drug.color,
+      backgroundColor: drug.color + '20',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      tension: 0.3,
+    });
+  });
+
+  if (showTotal && drugEntries.length > 1) {
+    datasets.push({
+      label: '合計濃度',
+      data: totalConcentrations.map((c, i) => ({ x: timeLabels[i], y: c })),
+      borderColor: '#1e293b',
+      borderWidth: 2.5,
+      borderDash: [6, 3],
+      pointRadius: 0,
+      fill: false,
+      tension: 0.3,
+    });
+  }
+
+  const maxConc = Math.max(...totalConcentrations, ...datasets.flatMap(d => d.data.map(p => p.y)));
+
+  const annotations = {};
+  if (showTherapeutic && hasLevodopa) {
+    const mecLevel = maxConc * 0.25;
+    const mtcLevel = maxConc * 0.75;
+    annotations.mecLine = {
+      type: 'line',
+      yMin: mecLevel,
+      yMax: mecLevel,
+      borderColor: '#22c55e88',
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      label: {
+        display: true,
+        content: 'MEC（最小有効濃度）',
+        position: 'start',
+        font: { size: 10 },
+        color: '#16a34a',
+        backgroundColor: '#f0fdf4',
+        padding: 3,
+      }
+    };
+    annotations.mtcLine = {
+      type: 'line',
+      yMin: mtcLevel,
+      yMax: mtcLevel,
+      borderColor: '#ef444488',
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      label: {
+        display: true,
+        content: 'ジスキネジア閾値',
+        position: 'start',
+        font: { size: 10 },
+        color: '#dc2626',
+        backgroundColor: '#fef2f2',
+        padding: 3,
+      }
+    };
+    annotations.therapeuticZone = {
+      type: 'box',
+      yMin: mecLevel,
+      yMax: mtcLevel,
+      backgroundColor: '#22c55e0d',
+      borderWidth: 0,
+    };
+    annotations.offZone = {
+      type: 'box',
+      yMin: 0,
+      yMax: mecLevel,
+      backgroundColor: '#f8717110',
+      borderWidth: 0,
+    };
+  }
+
+  const config = {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.8,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 16,
+            font: { size: 12 },
+          }
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              if (items.length > 0) {
+                return formatHourLabel(items[0].parsed.x);
+              }
+              return '';
+            },
+            label: (ctx) => {
+              return `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}`;
+            }
+          }
+        },
+        annotation: {
+          annotations
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: 0,
+          max: totalHours,
+          title: {
+            display: true,
+            text: '時刻',
+            font: { size: 13, weight: 'bold' },
+          },
+          ticks: {
+            stepSize: 1,
+            callback: (val) => {
+              if (val % 2 === 0 || totalHours <= 24) {
+                return formatHourLabel(val);
+              }
+              return '';
+            },
+            maxRotation: 45,
+            font: { size: 10 },
+          },
+          grid: {
+            color: (ctx) => {
+              const h = ctx.tick.value;
+              return h % 6 === 0 ? '#cbd5e1' : '#f1f5f9';
+            }
+          }
+        },
+        y: {
+          min: 0,
+          title: {
+            display: true,
+            text: '相対血中濃度（任意単位）',
+            font: { size: 13, weight: 'bold' },
+          },
+          ticks: {
+            font: { size: 10 },
+          },
+          grid: {
+            color: '#f1f5f9',
+          }
+        }
+      }
+    }
+  };
+
+  if (chart) {
+    chart.destroy();
+  }
+  chart = new Chart(document.getElementById('pk-chart'), config);
+
+  updateInfoTable();
+}
+
+function updateInfoTable() {
+  const tbody = document.getElementById('pk-table-body');
+  tbody.innerHTML = '';
+
+  drugEntries.forEach(entry => {
+    const drug = DRUG_DATABASE[entry.drugKey];
+    const tr = document.createElement('tr');
+
+    let tmax, halfLife;
+    if (drug.isPatch) {
+      tmax = '-（持続吸収）';
+      halfLife = getHalfLife(drug.ke).toFixed(1) + ' h（剥離後）';
+    } else {
+      tmax = getTmax(drug.ka, drug.ke).toFixed(1) + ' h';
+      halfLife = getHalfLife(drug.ke).toFixed(1) + ' h';
+    }
+
+    tr.innerHTML = `
+      <td><span class="drug-color-dot" style="background:${drug.color}; vertical-align: middle;"></span> ${drug.shortName}</td>
+      <td>${tmax}</td>
+      <td>${halfLife}</td>
+      <td>${entry.dose} ${drug.doseUnit}</td>
+      <td>${entry.times.length}回 (${entry.times.join(', ')})</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('btn-add-drug').addEventListener('click', () => {
+  createDrugEntry('pramipexole-ir');
+});
+
+document.getElementById('show-total').addEventListener('change', updateChart);
+document.getElementById('show-therapeutic').addEventListener('change', updateChart);
+document.getElementById('time-range').addEventListener('change', updateChart);
+
+createDrugEntry('levodopa-ir');
+</script>
+</body>
+</html>
