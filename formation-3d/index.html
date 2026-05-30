@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b3d2e" />
+<title>Formation Lab — 3Dフォーメーション対戦分析</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="topbar">
+      <div class="brand">
+        <span class="logo">⚽</span>
+        <span class="title">Formation Lab</span>
+        <span class="subtitle">3D フォーメーション対戦分析</span>
+      </div>
+    </header>
+
+    <!-- Controls (text never overlaps the 3D viewport) -->
+    <section id="controls" aria-label="設定">
+      <div class="ctrl team-home">
+        <label for="homeSel">HOME（青）</label>
+        <select id="homeSel" aria-label="ホームのフォーメーション"></select>
+      </div>
+      <div class="vs">VS</div>
+      <div class="ctrl team-away">
+        <label for="awaySel">AWAY（赤）</label>
+        <select id="awaySel" aria-label="アウェイのフォーメーション"></select>
+      </div>
+    </section>
+
+    <!-- 3D viewport: the only place the animation lives -->
+    <main id="stage">
+      <canvas id="scene" aria-label="3Dフォーメーションビュー"></canvas>
+      <!-- compact, edge-docked HUD that stays clear of the pitch center -->
+      <div id="angleBar" role="toolbar" aria-label="カメラアングル">
+        <button data-view="top" class="active" title="俯瞰（真上）">俯瞰</button>
+        <button data-view="broadcast" title="中継カメラ">中継</button>
+        <button data-view="behind" title="ゴール裏">ゴール裏</button>
+        <button data-view="corner" title="コーナー">コーナー</button>
+      </div>
+      <div id="playBar" role="toolbar" aria-label="再生">
+        <button id="rotateBtn" title="自動回転">⟳</button>
+        <button id="playBtn" class="active" title="動きの再生／停止">⏸</button>
+      </div>
+      <div id="hint">ドラッグで回転 / ピンチ・ホイールでズーム</div>
+    </main>
+
+    <!-- Analysis: separate panel, fully below the viewport, never over the animation -->
+    <section id="analysis" aria-label="有利不利分析">
+      <div id="verdict"></div>
+      <ul id="matchupList"></ul>
+      <p class="disclaimer">※ 各ゾーンの人数・配置から自動算出した一般的な相性の目安です。</p>
+    </section>
+  </div>
+
+  <!-- Three.js (classic globals so it runs from file:// without a build step) -->
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="assets/formations.js"></script>
+  <script src="assets/main.js"></script>
+</body>
+</html>
